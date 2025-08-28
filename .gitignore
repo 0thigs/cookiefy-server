@@ -3,3 +3,6 @@ node_modules
 .env
 
 /generated/prisma
+
+contexto.txt
+dump-repo.ps1
