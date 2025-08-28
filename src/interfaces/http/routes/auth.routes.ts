@@ -4,7 +4,7 @@ import { signInSchema, signUpSchema } from '../../validators/auth.schemas.js';
 import { PrismaUsersRepository } from '../../../infrastructure/repositories/prisma-users-repository.js';
 import { CreateUser } from '../../../application/users/create-user-use-case.js';
 import { compare } from '../../../infrastructure/security/hash.js';
-import { IS_PROD } from '../../../config/env.js';
+import { IS_PROD, env } from '../../../config/env.js';
 
 const SignUpResponse = z.object({
   id: z.string(),
@@ -13,14 +13,16 @@ const SignUpResponse = z.object({
   createdAt: z.string().datetime(),
 });
 
+const DurationOut = z.union([z.number(), z.string()]);
+
 const SignInResponse = z.object({
   token: z.string(),
-  expiresIn: z.number(),
+  expiresIn: DurationOut,
 });
 
 const RefreshResponse = z.object({
   token: z.string(),
-  expiresIn: z.number(),
+  expiresIn: DurationOut,
 });
 
 export async function authRoutes(app: FastifyInstance) {
@@ -62,8 +64,8 @@ export async function authRoutes(app: FastifyInstance) {
       const ok = await compare(body.password, user.passwordHash);
       if (!ok) return reply.unauthorized('Credenciais inválidas');
 
-      const token = app.jwt.sign({ sub: user.id });
-      const refresh = app.refreshJwt.sign({ sub: user.id });
+      const token = app.signAccess({ sub: user.id });
+      const refresh = app.signRefresh({ sub: user.id });
 
       reply.setCookie('refreshToken', refresh, {
         httpOnly: true,
@@ -72,7 +74,7 @@ export async function authRoutes(app: FastifyInstance) {
         path: '/',
       });
 
-      return { token, expiresIn: (app as any).jwt.options.sign.expiresIn ?? 0 };
+      return { token, expiresIn: env.JWT_ACCESS_TTL };
     },
   );
 
@@ -89,9 +91,9 @@ export async function authRoutes(app: FastifyInstance) {
       if (!token) return reply.unauthorized();
 
       try {
-        const payload = app.refreshJwt.verify(token) as { sub: string };
-        const newAccess = app.jwt.sign({ sub: payload.sub });
-        return { token: newAccess, expiresIn: (app as any).jwt.options.sign.expiresIn ?? 0 };
+        const payload = app.jwt.verify(token) as { sub: string };
+        const newAccess = app.signAccess({ sub: payload.sub });
+        return { token: newAccess, expiresIn: env.JWT_ACCESS_TTL };
       } catch {
         return reply.unauthorized();
       }
@@ -100,7 +102,9 @@ export async function authRoutes(app: FastifyInstance) {
 
   app.post(
     '/signout',
-    { schema: { tags: ['Auth'], response: { 204: z.null() } } },
+    {
+      schema: { tags: ['Auth'], response: { 204: z.null() } },
+    },
     async (_req, reply) => {
       reply.clearCookie('refreshToken', { path: '/' });
       return reply.status(204).send();
