@@ -1,13 +1,14 @@
 import type { FastifyInstance } from 'fastify';
+import fastifyJwt from '@fastify/jwt';
 import { env } from '../../config/env.js';
 
 export function registerJWT(app: FastifyInstance) {
-  app.register(import('@fastify/jwt'), {
+  app.register(fastifyJwt, {
     secret: env.JWT_ACCESS_SECRET,
     sign: { expiresIn: env.JWT_ACCESS_TTL },
   });
 
-  app.register(import('@fastify/jwt'), {
+  app.register(fastifyJwt, {
     secret: env.JWT_REFRESH_SECRET,
     sign: { expiresIn: env.JWT_REFRESH_TTL },
     namespace: 'refresh',
