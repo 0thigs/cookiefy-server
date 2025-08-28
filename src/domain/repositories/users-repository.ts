@@ -10,4 +10,10 @@ export interface UsersRepository {
     photoUrl?: string | null;
     role?: 'USER' | 'ADMIN';
   }): Promise<User>;
+
+  update(id: string, data: { name?: string; photoUrl?: string | null }): Promise<User>;
+  getPublicProfile(id: string): Promise<{
+    user: Pick<User, 'id' | 'name' | 'photoUrl'> & { createdAt: Date };
+    stats: { recipes: number; reviews: number; favorites: number };
+  } | null>;
 }

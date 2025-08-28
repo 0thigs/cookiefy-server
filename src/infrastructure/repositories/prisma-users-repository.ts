@@ -2,17 +2,16 @@ import { prisma } from '../../shared/db/prisma.js';
 import type { UsersRepository } from '../../domain/repositories/users-repository.js';
 import type { User } from '../../domain/entities/user.js';
 
-function map(prismaUser: any): User {
-  // mapeia explicitamente para o tipo de domínio
+function map(u: any): User {
   return {
-    id: prismaUser.id,
-    email: prismaUser.email,
-    name: prismaUser.name,
-    photoUrl: prismaUser.photoUrl,
-    role: prismaUser.role,
-    passwordHash: prismaUser.passwordHash,
-    createdAt: prismaUser.createdAt,
-    updatedAt: prismaUser.updatedAt,
+    id: u.id,
+    email: u.email,
+    name: u.name,
+    photoUrl: u.photoUrl,
+    role: u.role,
+    passwordHash: u.passwordHash,
+    createdAt: u.createdAt,
+    updatedAt: u.updatedAt,
   };
 }
 
@@ -21,10 +20,12 @@ export class PrismaUsersRepository implements UsersRepository {
     const u = await prisma.user.findUnique({ where: { email } });
     return u ? map(u) : null;
   }
+
   async findById(id: string) {
     const u = await prisma.user.findUnique({ where: { id } });
     return u ? map(u) : null;
   }
+
   async create(data: {
     email: string;
     name: string;
@@ -42,5 +43,44 @@ export class PrismaUsersRepository implements UsersRepository {
       },
     });
     return map(u);
+  }
+
+  async update(id: string, data: { name?: string; photoUrl?: string | null }) {
+    const u = await prisma.user.update({
+      where: { id },
+      data: {
+        ...(data.name !== undefined ? { name: data.name } : {}),
+        ...(data.photoUrl !== undefined ? { photoUrl: data.photoUrl } : {}),
+      },
+    });
+    return map(u);
+  }
+
+  async getPublicProfile(id: string) {
+    const u = await prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        photoUrl: true,
+        createdAt: true,
+        _count: {
+          select: {
+            recipes: true,
+            reviews: true,
+            favorites: true,
+          },
+        },
+      },
+    });
+    if (!u) return null;
+    return {
+      user: { id: u.id, name: u.name, photoUrl: u.photoUrl, createdAt: u.createdAt },
+      stats: {
+        recipes: u._count.recipes,
+        reviews: u._count.reviews,
+        favorites: u._count.favorites,
+      },
+    };
   }
 }

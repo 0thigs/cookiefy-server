@@ -3,9 +3,38 @@ import type { RecipesRepository } from '../../domain/repositories/recipe-reposit
 
 export class PrismaRecipesRepository implements RecipesRepository {
   async create(data: { title: string; description?: string | null; authorId: string }) {
-    return prisma.recipe.create({ data });
+    const r = await prisma.recipe.create({ data });
+    return {
+      id: r.id,
+      title: r.title,
+      description: r.description ?? null,
+      authorId: r.authorId,
+      createdAt: r.createdAt,
+    };
   }
-  async listByAuthor(authorId: string) {
-    return prisma.recipe.findMany({ where: { authorId }, orderBy: { createdAt: 'desc' } });
+
+  async listByAuthor(authorId: string, pagination: { page: number; pageSize: number }) {
+    const { page, pageSize } = pagination;
+    const skip = (page - 1) * pageSize;
+
+    const [total, itemsRaw] = await Promise.all([
+      prisma.recipe.count({ where: { authorId } }),
+      prisma.recipe.findMany({
+        where: { authorId },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: pageSize,
+      }),
+    ]);
+
+    const items = itemsRaw.map((r) => ({
+      id: r.id,
+      title: r.title,
+      description: r.description ?? null,
+      authorId: r.authorId,
+      createdAt: r.createdAt,
+    }));
+
+    return { items, total, page, pageSize };
   }
 }
