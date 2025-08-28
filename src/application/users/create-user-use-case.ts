@@ -16,7 +16,7 @@ export class CreateUser {
       id: user.id,
       email: user.email,
       name: user.name,
-      createdAt: user.createdAt,
+      createdAt: user.createdAt.toISOString(),
     };
   }
 }
