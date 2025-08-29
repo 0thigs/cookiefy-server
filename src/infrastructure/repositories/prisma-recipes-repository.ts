@@ -269,6 +269,11 @@ export class PrismaRecipesRepository implements RecipesRepository {
     sort?: 'newest' | 'oldest';
     categoryId?: string;
     categorySlug?: string;
+    minPrep?: number;
+    maxPrep?: number;
+    minCook?: number;
+    maxCook?: number;
+    ingredients?: string[];
   }) {
     const {
       page,
@@ -279,16 +284,61 @@ export class PrismaRecipesRepository implements RecipesRepository {
       sort = 'newest',
       categoryId,
       categorySlug,
+      minPrep,
+      maxPrep,
+      minCook,
+      maxCook,
+      ingredients,
     } = filters;
+
     const skip = (page - 1) * pageSize;
+
+    const textWhere = q
+      ? {
+          OR: [
+            { title: { contains: q, mode: 'insensitive' } },
+            {
+              ingredients: {
+                some: { ingredient: { name: { contains: q, mode: 'insensitive' } } },
+              },
+            },
+          ],
+        }
+      : {};
+
+    const ingredientsWhere =
+      ingredients && ingredients.length > 0
+        ? {
+            AND: ingredients.map((name) => ({
+              ingredients: {
+                some: {
+                  ingredient: {
+                    name: { contains: name, mode: 'insensitive' },
+                  },
+                },
+              },
+            })),
+          }
+        : {};
+
+    const prepWhere: any = {};
+    if (minPrep !== undefined) prepWhere.gte = minPrep;
+    if (maxPrep !== undefined) prepWhere.lte = maxPrep;
+
+    const cookWhere: any = {};
+    if (minCook !== undefined) cookWhere.gte = minCook;
+    if (maxCook !== undefined) cookWhere.lte = maxCook;
 
     const where: any = {
       status: 'PUBLISHED',
-      ...(q ? { title: { contains: q, mode: 'insensitive' } } : {}),
       ...(difficulty ? { difficulty } : {}),
       ...(authorId ? { authorId } : {}),
+      ...(Object.keys(prepWhere).length ? { prepMinutes: prepWhere } : {}),
+      ...(Object.keys(cookWhere).length ? { cookMinutes: cookWhere } : {}),
       ...(categoryId ? { categories: { some: { categoryId } } } : {}),
       ...(categorySlug ? { categories: { some: { category: { slug: categorySlug } } } } : {}),
+      ...textWhere,
+      ...ingredientsWhere,
     };
 
     const orderBy =

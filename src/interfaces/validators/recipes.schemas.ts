@@ -161,4 +161,9 @@ export const publicListQuerySchema = paginationQuerySchema.extend({
   sort: z.enum(['newest', 'oldest']).default('newest'),
   categoryId: z.string().min(1).optional(),
   categorySlug: z.string().min(1).optional(),
+  minPrep: z.coerce.number().min(0).optional(),
+  maxPrep: z.coerce.number().min(0).optional(),
+  minCook: z.coerce.number().min(0).optional(),
+  maxCook: z.coerce.number().min(0).optional(),
+  ingredient: z.string().min(1).optional(),
 });

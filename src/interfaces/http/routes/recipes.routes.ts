@@ -77,8 +77,29 @@ export async function recipesRoutes(app: FastifyInstance) {
       },
     },
     async (req) => {
-      const { page, pageSize, q, difficulty, authorId, sort, categoryId, categorySlug } =
-        publicListQuerySchema.parse(req.query);
+      const {
+        page,
+        pageSize,
+        q,
+        difficulty,
+        authorId,
+        sort,
+        categoryId,
+        categorySlug,
+        minPrep,
+        maxPrep,
+        minCook,
+        maxCook,
+        ingredient,
+      } = publicListQuerySchema.parse(req.query);
+
+      const ingredients = ingredient
+        ? ingredient
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean)
+        : undefined;
+
       const result = await recipesRepo.listPublic({
         page,
         pageSize,
@@ -88,6 +109,11 @@ export async function recipesRoutes(app: FastifyInstance) {
         sort,
         categoryId,
         categorySlug,
+        minPrep,
+        maxPrep,
+        minCook,
+        maxCook,
+        ingredients,
       });
       return {
         data: result.items.map((r) => ({

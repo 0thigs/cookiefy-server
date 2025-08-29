@@ -66,5 +66,10 @@ export interface RecipesRepository {
     sort?: 'newest' | 'oldest';
     categoryId?: string;
     categorySlug?: string;
+    minPrep?: number;
+    maxPrep?: number;
+    minCook?: number;
+    maxCook?: number;
+    ingredients?: string[];
   }): Promise<{ items: Recipe[]; total: number; page: number; pageSize: number }>;
 }
