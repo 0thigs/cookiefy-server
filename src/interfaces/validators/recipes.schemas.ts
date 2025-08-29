@@ -159,8 +159,19 @@ export const publicListQuerySchema = paginationQuerySchema.extend({
   difficulty: DifficultyEnum.optional(),
   authorId: z.string().min(1).optional(),
   sort: z.enum(['newest', 'oldest']).default('newest'),
+
+  // ✔️ já existiam (compatibilidade)
   categoryId: z.string().min(1).optional(),
   categorySlug: z.string().min(1).optional(),
+
+  // 🆕 múltiplas categorias via string separada por vírgula
+  // ex.: categoryIds=a,b,c  |  categorySlugs=brasileira,vegana
+  categoryIds: z.string().min(1).optional(),
+  categorySlugs: z.string().min(1).optional(),
+  // como combinar múltiplas? 'any' (interseção OR) ou 'all' (AND entre todas)
+  categoryMatch: z.enum(['any', 'all']).default('any'),
+
+  // (já tínhamos) filtros de tempo e ingrediente
   minPrep: z.coerce.number().min(0).optional(),
   maxPrep: z.coerce.number().min(0).optional(),
   minCook: z.coerce.number().min(0).optional(),

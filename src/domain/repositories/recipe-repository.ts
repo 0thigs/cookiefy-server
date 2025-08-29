@@ -31,6 +31,7 @@ export interface RecipesRepository {
   updateWithNested(
     id: string,
     authorId: string,
+    isAdmin: boolean,
     data: Partial<{
       title: string;
       description: string | null;
@@ -51,8 +52,8 @@ export interface RecipesRepository {
     }>,
   ): Promise<void>;
 
-  publish(id: string, authorId: string): Promise<void>;
-  delete(id: string, authorId: string): Promise<void>;
+  publish(id: string, authorId: string, isAdmin: boolean): Promise<void>;
+  delete(id: string, authorId: string, isAdmin: boolean): Promise<void>;
 
   findPublicById(id: string): Promise<any | null>;
   findByIdForAuthor(id: string, authorId: string): Promise<any | null>;
@@ -64,8 +65,14 @@ export interface RecipesRepository {
     difficulty?: 'EASY' | 'MEDIUM' | 'HARD';
     authorId?: string;
     sort?: 'newest' | 'oldest';
+    // ✔️ single
     categoryId?: string;
     categorySlug?: string;
+    // 🆕 múltiplas
+    categoryIds?: string[];
+    categorySlugs?: string[];
+    categoryMatch?: 'any' | 'all';
+    // já existentes
     minPrep?: number;
     maxPrep?: number;
     minCook?: number;

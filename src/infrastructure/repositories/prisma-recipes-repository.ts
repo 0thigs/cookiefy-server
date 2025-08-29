@@ -117,6 +117,7 @@ export class PrismaRecipesRepository implements RecipesRepository {
   async updateWithNested(
     id: string,
     authorId: string,
+    isAdmin: boolean,
     data: Partial<{
       title: string;
       description: string | null;
@@ -137,7 +138,9 @@ export class PrismaRecipesRepository implements RecipesRepository {
     }>,
   ) {
     await prisma.$transaction(async (tx) => {
-      const exists = await tx.recipe.findFirst({ where: { id, authorId } });
+      const exists = await tx.recipe.findFirst({
+        where: { id, ...(isAdmin ? {} : { authorId }) },
+      });
       if (!exists) throw new Error('NOT_FOUND');
 
       await tx.recipe.update({
@@ -219,16 +222,18 @@ export class PrismaRecipesRepository implements RecipesRepository {
     });
   }
 
-  async publish(id: string, authorId: string) {
+  async publish(id: string, authorId: string, isAdmin: boolean) {
     const r = await prisma.recipe.updateMany({
-      where: { id, authorId },
+      where: { id, ...(isAdmin ? {} : { authorId }) },
       data: { status: 'PUBLISHED', publishedAt: new Date() },
     });
     if (r.count === 0) throw new Error('NOT_FOUND');
   }
 
-  async delete(id: string, authorId: string) {
-    const r = await prisma.recipe.deleteMany({ where: { id, authorId } });
+  async delete(id: string, authorId: string, isAdmin: boolean) {
+    const r = await prisma.recipe.deleteMany({
+      where: { id, ...(isAdmin ? {} : { authorId }) },
+    });
     if (r.count === 0) throw new Error('NOT_FOUND');
   }
 
@@ -269,6 +274,9 @@ export class PrismaRecipesRepository implements RecipesRepository {
     sort?: 'newest' | 'oldest';
     categoryId?: string;
     categorySlug?: string;
+    categoryIds?: string[];
+    categorySlugs?: string[];
+    categoryMatch?: 'any' | 'all';
     minPrep?: number;
     maxPrep?: number;
     minCook?: number;
@@ -284,6 +292,9 @@ export class PrismaRecipesRepository implements RecipesRepository {
       sort = 'newest',
       categoryId,
       categorySlug,
+      categoryIds,
+      categorySlugs,
+      categoryMatch = 'any',
       minPrep,
       maxPrep,
       minCook,
@@ -329,16 +340,47 @@ export class PrismaRecipesRepository implements RecipesRepository {
     if (minCook !== undefined) cookWhere.gte = minCook;
     if (maxCook !== undefined) cookWhere.lte = maxCook;
 
+    // —— Categorias —— //
+    const andConds: any[] = [];
+    const orConds: any[] = [];
+
+    // single (compat)
+    if (categoryId) andConds.push({ categories: { some: { categoryId } } });
+    if (categorySlug) andConds.push({ categories: { some: { category: { slug: categorySlug } } } });
+
+    const multiById = (categoryIds ?? []).filter(Boolean);
+    const multiBySlug = (categorySlugs ?? []).filter(Boolean);
+
+    if (multiById.length || multiBySlug.length) {
+      if (categoryMatch === 'any') {
+        if (multiById.length) {
+          orConds.push({ categories: { some: { categoryId: { in: multiById } } } });
+        }
+        if (multiBySlug.length) {
+          orConds.push({ categories: { some: { category: { slug: { in: multiBySlug } } } } });
+        }
+      } else {
+        // 'all' => AND de cada uma
+        for (const id of multiById) {
+          andConds.push({ categories: { some: { categoryId: id } } });
+        }
+        for (const slug of multiBySlug) {
+          andConds.push({ categories: { some: { category: { slug } } } });
+        }
+      }
+    }
+
     const where: any = {
       status: 'PUBLISHED',
       ...(difficulty ? { difficulty } : {}),
       ...(authorId ? { authorId } : {}),
       ...(Object.keys(prepWhere).length ? { prepMinutes: prepWhere } : {}),
       ...(Object.keys(cookWhere).length ? { cookMinutes: cookWhere } : {}),
-      ...(categoryId ? { categories: { some: { categoryId } } } : {}),
-      ...(categorySlug ? { categories: { some: { category: { slug: categorySlug } } } } : {}),
       ...textWhere,
       ...ingredientsWhere,
+      ...(andConds.length || orConds.length
+        ? { AND: [...andConds, ...(orConds.length ? [{ OR: orConds }] : [])] }
+        : {}),
     };
 
     const orderBy =

@@ -5,7 +5,7 @@ export class PublishRecipe {
   constructor(private recipes: RecipesRepository) {}
   async execute(input: { id: string; authorId: string }) {
     try {
-      await this.recipes.publish(input.id, input.authorId);
+      await this.recipes.publish(input.id, input.authorId, false);
     } catch (e: any) {
       if (e?.message === 'NOT_FOUND') throw new AppError('Receita não encontrada', 404);
       throw e;

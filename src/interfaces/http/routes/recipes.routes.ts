@@ -10,9 +10,11 @@ import {
   updateRecipeSchema,
 } from '../../validators/recipes.schemas.js';
 import { PrismaRecipesRepository } from '../../../infrastructure/repositories/prisma-recipes-repository.js';
+import { PrismaUsersRepository } from '../../../infrastructure/repositories/prisma-users-repository.js';
 
 export async function recipesRoutes(app: FastifyInstance) {
   const recipesRepo = new PrismaRecipesRepository();
+  const usersRepo = new PrismaUsersRepository();
 
   app.post(
     '/',
@@ -86,6 +88,9 @@ export async function recipesRoutes(app: FastifyInstance) {
         sort,
         categoryId,
         categorySlug,
+        categoryIds,
+        categorySlugs,
+        categoryMatch,
         minPrep,
         maxPrep,
         minCook,
@@ -100,6 +105,26 @@ export async function recipesRoutes(app: FastifyInstance) {
             .filter(Boolean)
         : undefined;
 
+      // normaliza para arrays:
+      const catIds = [
+        ...(categoryId ? [categoryId] : []),
+        ...(categoryIds
+          ? categoryIds
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean)
+          : []),
+      ];
+      const catSlugs = [
+        ...(categorySlug ? [categorySlug] : []),
+        ...(categorySlugs
+          ? categorySlugs
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean)
+          : []),
+      ];
+
       const result = await recipesRepo.listPublic({
         page,
         pageSize,
@@ -108,7 +133,10 @@ export async function recipesRoutes(app: FastifyInstance) {
         authorId,
         sort,
         categoryId,
-        categorySlug,
+        categorySlug, // mantemos por compat
+        categoryIds: catIds.length ? catIds : undefined,
+        categorySlugs: catSlugs.length ? catSlugs : undefined,
+        categoryMatch,
         minPrep,
         maxPrep,
         minCook,
@@ -162,10 +190,13 @@ export async function recipesRoutes(app: FastifyInstance) {
     },
     async (req, reply) => {
       const { id } = req.params as { id: string };
-      const authorId = (req.user as any).sub as string;
+      const actorId = (req.user as any).sub as string;
+      const me = await usersRepo.findById(actorId);
+      const isAdmin = me?.role === 'ADMIN';
+
       const data = updateRecipeSchema.parse(req.body);
       try {
-        await recipesRepo.updateWithNested(id, authorId, data);
+        await recipesRepo.updateWithNested(id, actorId, !!isAdmin, data);
         return reply.status(204).send();
       } catch (e: any) {
         if (e?.message === 'NOT_FOUND') return reply.notFound('Receita não encontrada');
@@ -186,9 +217,12 @@ export async function recipesRoutes(app: FastifyInstance) {
     },
     async (req, reply) => {
       const { id } = req.params as { id: string };
-      const authorId = (req.user as any).sub as string;
+      const actorId = (req.user as any).sub as string;
+      const me = await usersRepo.findById(actorId);
+      const isAdmin = me?.role === 'ADMIN';
+
       try {
-        await recipesRepo.publish(id, authorId);
+        await recipesRepo.publish(id, actorId, !!isAdmin);
         return reply.status(204).send();
       } catch (e: any) {
         if (e?.message === 'NOT_FOUND') return reply.notFound('Receita não encontrada');
@@ -209,9 +243,12 @@ export async function recipesRoutes(app: FastifyInstance) {
     },
     async (req, reply) => {
       const { id } = req.params as { id: string };
-      const authorId = (req.user as any).sub as string;
+      const actorId = (req.user as any).sub as string;
+      const me = await usersRepo.findById(actorId);
+      const isAdmin = me?.role === 'ADMIN';
+
       try {
-        await recipesRepo.delete(id, authorId);
+        await recipesRepo.delete(id, actorId, !!isAdmin);
         return reply.status(204).send();
       } catch (e: any) {
         if (e?.message === 'NOT_FOUND') return reply.notFound('Receita não encontrada');

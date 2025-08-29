@@ -26,7 +26,7 @@ export class UpdateRecipe {
     }>;
   }) {
     try {
-      await this.recipes.updateWithNested(input.id, input.authorId, input.data);
+      await this.recipes.updateWithNested(input.id, input.authorId, false, input.data);
     } catch (e: any) {
       if (e?.message === 'NOT_FOUND') throw new AppError('Receita não encontrada', 404);
       throw e;
