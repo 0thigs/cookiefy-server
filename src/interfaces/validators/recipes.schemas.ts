@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 export const DifficultyEnum = z.enum(['EASY', 'MEDIUM', 'HARD']);
 export const RecipeStatusEnum = z.enum(['DRAFT', 'PUBLISHED', 'REJECTED']);
+export const categoryLinkSchema = z.object({ categoryId: z.string().min(1) });
 
 export const stepInputSchema = z.object({
   order: z.number().int().min(0),
@@ -39,7 +40,7 @@ export const recipeCoreSchema = z.object({
 export const createRecipeFullSchema = z.object({
   title: z.string().min(2),
   description: z.string().nullable().optional(),
-  difficulty: z.enum(['EASY', 'MEDIUM', 'HARD']).optional(),
+  difficulty: DifficultyEnum.optional(),
   prepMinutes: z.number().int().positive().optional(),
   cookMinutes: z.number().int().positive().optional(),
   servings: z.number().int().positive().optional(),
@@ -75,12 +76,20 @@ export const createRecipeFullSchema = z.object({
       }),
     )
     .optional(),
+  categories: z.array(categoryLinkSchema).optional(),
 });
 
 export const updateRecipeSchema = recipeCoreSchema.partial().extend({
+  description: z.string().nullable().optional(),
+  difficulty: DifficultyEnum.nullable().optional(),
+  prepMinutes: z.number().int().min(0).nullable().optional(),
+  cookMinutes: z.number().int().min(0).nullable().optional(),
+  servings: z.number().int().min(1).nullable().optional(),
+  nutrition: z.record(z.any()).nullable().optional(),
   steps: z.array(stepInputSchema).optional(),
   photos: z.array(photoInputSchema).optional(),
   ingredients: z.array(ingredientInputSchema).optional(),
+  categories: z.array(categoryLinkSchema).optional(),
 });
 
 export const idParamSchema = z.object({ id: z.string().min(1) });
@@ -128,6 +137,7 @@ export const recipeDetailOut = z.object({
       unit: z.string().nullable().optional(),
     }),
   ),
+  categories: z.array(z.object({ id: z.string(), name: z.string(), slug: z.string() })),
 });
 
 export const paginationQuerySchema = z.object({
@@ -149,4 +159,6 @@ export const publicListQuerySchema = paginationQuerySchema.extend({
   difficulty: DifficultyEnum.optional(),
   authorId: z.string().min(1).optional(),
   sort: z.enum(['newest', 'oldest']).default('newest'),
+  categoryId: z.string().min(1).optional(),
+  categorySlug: z.string().min(1).optional(),
 });

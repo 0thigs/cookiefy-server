@@ -7,6 +7,7 @@ import {
   recipeBriefOut,
   recipeDetailOut,
   paginatedRecipesOut,
+  updateRecipeSchema,
 } from '../../validators/recipes.schemas.js';
 import { PrismaRecipesRepository } from '../../../infrastructure/repositories/prisma-recipes-repository.js';
 
@@ -76,9 +77,8 @@ export async function recipesRoutes(app: FastifyInstance) {
       },
     },
     async (req) => {
-      const { page, pageSize, q, difficulty, authorId, sort } = publicListQuerySchema.parse(
-        req.query,
-      );
+      const { page, pageSize, q, difficulty, authorId, sort, categoryId, categorySlug } =
+        publicListQuerySchema.parse(req.query);
       const result = await recipesRepo.listPublic({
         page,
         pageSize,
@@ -86,6 +86,8 @@ export async function recipesRoutes(app: FastifyInstance) {
         difficulty,
         authorId,
         sort,
+        categoryId,
+        categorySlug,
       });
       return {
         data: result.items.map((r) => ({
@@ -128,14 +130,14 @@ export async function recipesRoutes(app: FastifyInstance) {
       schema: {
         tags: ['Recipes'],
         params: z.object({ id: z.string().min(1) }),
-        body: createRecipeFullSchema.partial(),
+        body: updateRecipeSchema,
         response: { 204: z.null() },
       },
     },
     async (req, reply) => {
       const { id } = req.params as { id: string };
       const authorId = (req.user as any).sub as string;
-      const data = createRecipeFullSchema.partial().parse(req.body);
+      const data = updateRecipeSchema.parse(req.body);
       try {
         await recipesRepo.updateWithNested(id, authorId, data);
         return reply.status(204).send();

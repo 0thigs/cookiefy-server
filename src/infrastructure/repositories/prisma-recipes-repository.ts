@@ -55,6 +55,7 @@ export class PrismaRecipesRepository implements RecipesRepository {
       amount?: number | null;
       unit?: string | null;
     }>;
+    categories?: Array<{ categoryId: string }>;
   }) {
     const r = await prisma.recipe.create({
       data: {
@@ -103,6 +104,10 @@ export class PrismaRecipesRepository implements RecipesRepository {
                 })),
               }
             : undefined,
+        categories:
+          data.categories && data.categories.length > 0
+            ? { create: data.categories.map((c) => ({ categoryId: c.categoryId })) }
+            : undefined,
       },
     });
 
@@ -128,6 +133,7 @@ export class PrismaRecipesRepository implements RecipesRepository {
         amount?: number | null;
         unit?: string | null;
       }>;
+      categories: Array<{ categoryId: string }>;
     }>,
   ) {
     await prisma.$transaction(async (tx) => {
@@ -198,6 +204,18 @@ export class PrismaRecipesRepository implements RecipesRepository {
           });
         }
       }
+
+      if (data.categories) {
+        await tx.recipeCategory.deleteMany({ where: { recipeId: id } });
+        if (data.categories.length > 0) {
+          await tx.recipeCategory.createMany({
+            data: data.categories.map((c) => ({
+              recipeId: id,
+              categoryId: c.categoryId,
+            })),
+          });
+        }
+      }
     });
   }
 
@@ -221,6 +239,7 @@ export class PrismaRecipesRepository implements RecipesRepository {
         steps: { orderBy: { order: 'asc' } },
         photos: { orderBy: { order: 'asc' } },
         ingredients: { include: { ingredient: true } },
+        categories: { include: { category: true } },
       },
     });
     if (!r) return null;
@@ -234,6 +253,7 @@ export class PrismaRecipesRepository implements RecipesRepository {
         steps: { orderBy: { order: 'asc' } },
         photos: { orderBy: { order: 'asc' } },
         ingredients: { include: { ingredient: true } },
+        categories: { include: { category: true } },
       },
     });
     if (!r) return null;
@@ -247,8 +267,19 @@ export class PrismaRecipesRepository implements RecipesRepository {
     difficulty?: 'EASY' | 'MEDIUM' | 'HARD';
     authorId?: string;
     sort?: 'newest' | 'oldest';
+    categoryId?: string;
+    categorySlug?: string;
   }) {
-    const { page, pageSize, q, difficulty, authorId, sort = 'newest' } = filters;
+    const {
+      page,
+      pageSize,
+      q,
+      difficulty,
+      authorId,
+      sort = 'newest',
+      categoryId,
+      categorySlug,
+    } = filters;
     const skip = (page - 1) * pageSize;
 
     const where: any = {
@@ -256,6 +287,8 @@ export class PrismaRecipesRepository implements RecipesRepository {
       ...(q ? { title: { contains: q, mode: 'insensitive' } } : {}),
       ...(difficulty ? { difficulty } : {}),
       ...(authorId ? { authorId } : {}),
+      ...(categoryId ? { categories: { some: { categoryId } } } : {}),
+      ...(categorySlug ? { categories: { some: { category: { slug: categorySlug } } } } : {}),
     };
 
     const orderBy =
@@ -318,6 +351,11 @@ export class PrismaRecipesRepository implements RecipesRepository {
         name: ri.ingredient.name,
         amount: ri.amount ?? null,
         unit: ri.unit ?? null,
+      })),
+      categories: r.categories.map((rc: any) => ({
+        id: rc.categoryId,
+        name: rc.category.name,
+        slug: rc.category.slug,
       })),
     };
   }

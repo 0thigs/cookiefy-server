@@ -25,6 +25,7 @@ export interface RecipesRepository {
       amount?: number | null;
       unit?: string | null;
     }>;
+    categories?: Array<{ categoryId: string }>;
   }): Promise<{ id: string }>;
 
   updateWithNested(
@@ -46,6 +47,7 @@ export interface RecipesRepository {
         amount?: number | null;
         unit?: string | null;
       }>;
+      categories: Array<{ categoryId: string }>;
     }>,
   ): Promise<void>;
 
@@ -62,5 +64,7 @@ export interface RecipesRepository {
     difficulty?: 'EASY' | 'MEDIUM' | 'HARD';
     authorId?: string;
     sort?: 'newest' | 'oldest';
+    categoryId?: string;
+    categorySlug?: string;
   }): Promise<{ items: Recipe[]; total: number; page: number; pageSize: number }>;
 }

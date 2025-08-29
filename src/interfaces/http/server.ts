@@ -19,6 +19,7 @@ import {
   validatorCompiler,
   ZodTypeProvider,
 } from 'fastify-type-provider-zod';
+import { categoriesRoutes } from './routes/categories.routes.js';
 
 export function buildServer(): FastifyInstance {
   const app = Fastify({
@@ -75,6 +76,7 @@ export function buildServer(): FastifyInstance {
   app.register(authRoutes, { prefix: '/auth' });
   app.register(usersRoutes, { prefix: '/users' });
   app.register(recipesRoutes, { prefix: '/recipes' });
+  app.register(categoriesRoutes, { prefix: '/categories' });
 
   app.setErrorHandler((err, _req, reply) => {
     const status = (err as any).statusCode ?? 500;
