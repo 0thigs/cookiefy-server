@@ -65,14 +65,11 @@ export interface RecipesRepository {
     difficulty?: 'EASY' | 'MEDIUM' | 'HARD';
     authorId?: string;
     sort?: 'newest' | 'oldest';
-    // ✔️ single
     categoryId?: string;
     categorySlug?: string;
-    // 🆕 múltiplas
     categoryIds?: string[];
     categorySlugs?: string[];
     categoryMatch?: 'any' | 'all';
-    // já existentes
     minPrep?: number;
     maxPrep?: number;
     minCook?: number;

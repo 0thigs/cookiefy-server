@@ -340,11 +340,9 @@ export class PrismaRecipesRepository implements RecipesRepository {
     if (minCook !== undefined) cookWhere.gte = minCook;
     if (maxCook !== undefined) cookWhere.lte = maxCook;
 
-    // —— Categorias —— //
     const andConds: any[] = [];
     const orConds: any[] = [];
 
-    // single (compat)
     if (categoryId) andConds.push({ categories: { some: { categoryId } } });
     if (categorySlug) andConds.push({ categories: { some: { category: { slug: categorySlug } } } });
 
@@ -360,7 +358,6 @@ export class PrismaRecipesRepository implements RecipesRepository {
           orConds.push({ categories: { some: { category: { slug: { in: multiBySlug } } } } });
         }
       } else {
-        // 'all' => AND de cada uma
         for (const id of multiById) {
           andConds.push({ categories: { some: { categoryId: id } } });
         }

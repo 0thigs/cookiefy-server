@@ -105,7 +105,6 @@ export async function recipesRoutes(app: FastifyInstance) {
             .filter(Boolean)
         : undefined;
 
-      // normaliza para arrays:
       const catIds = [
         ...(categoryId ? [categoryId] : []),
         ...(categoryIds
@@ -133,7 +132,7 @@ export async function recipesRoutes(app: FastifyInstance) {
         authorId,
         sort,
         categoryId,
-        categorySlug, // mantemos por compat
+        categorySlug,
         categoryIds: catIds.length ? catIds : undefined,
         categorySlugs: catSlugs.length ? catSlugs : undefined,
         categoryMatch,
