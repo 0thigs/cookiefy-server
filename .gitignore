@@ -6,3 +6,5 @@ node_modules
 
 contexto.txt
 dump-repo.ps1
+
+*.ps1
