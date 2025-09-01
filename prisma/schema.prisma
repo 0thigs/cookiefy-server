@@ -1,5 +1,3 @@
-// schema.prisma — Recipe Flow (PostgreSQL)
-
 generator client {
   provider = "prisma-client-js"
 }
