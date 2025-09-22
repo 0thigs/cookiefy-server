@@ -69,7 +69,7 @@ export async function authRoutes(app: FastifyInstance) {
 
       reply.setCookie('refreshToken', refresh, {
         httpOnly: true,
-        sameSite: 'lax',
+        sameSite: IS_PROD ? 'none' : 'lax',
         secure: IS_PROD,
         path: '/',
       });

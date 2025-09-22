@@ -94,11 +94,18 @@ export const updateRecipeSchema = recipeCoreSchema.partial().extend({
 
 export const idParamSchema = z.object({ id: z.string().min(1) });
 
+export const authorInfoSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  photoUrl: z.string().nullable(),
+});
+
 export const recipeBriefOut = z.object({
   id: z.string(),
   title: z.string(),
   description: z.string().nullable().optional(),
   authorId: z.string(),
+  author: authorInfoSchema,
   createdAt: z.string().datetime(),
 });
 
@@ -107,6 +114,7 @@ export const recipeDetailOut = z.object({
   title: z.string(),
   description: z.string().nullable().optional(),
   authorId: z.string(),
+  author: authorInfoSchema,
   difficulty: DifficultyEnum.nullable().optional(),
   prepMinutes: z.number().int().nullable().optional(),
   cookMinutes: z.number().int().nullable().optional(),

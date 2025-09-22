@@ -62,6 +62,11 @@ export async function recipesRoutes(app: FastifyInstance) {
           title: r.title,
           description: r.description ?? null,
           authorId: r.authorId,
+          author: {
+            id: r.author.id,
+            name: r.author.name,
+            photoUrl: r.author.photoUrl ?? null,
+          },
           createdAt: r.createdAt.toISOString(),
         })),
         meta: { page: result.page, pageSize: result.pageSize, total: result.total },
@@ -148,6 +153,11 @@ export async function recipesRoutes(app: FastifyInstance) {
           title: r.title,
           description: r.description ?? null,
           authorId: r.authorId,
+          author: {
+            id: r.author.id,
+            name: r.author.name,
+            photoUrl: r.author.photoUrl ?? null,
+          },
           createdAt: r.createdAt.toISOString(),
         })),
         meta: { page: result.page, pageSize: result.pageSize, total: result.total },

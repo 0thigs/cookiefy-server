@@ -24,6 +24,15 @@ export class PrismaRecipesRepository implements RecipesRepository {
         orderBy: { createdAt: 'desc' },
         skip,
         take: pageSize,
+        include: {
+          author: {
+            select: {
+              id: true,
+              name: true,
+              photoUrl: true,
+            },
+          },
+        },
       }),
     ]);
 
@@ -33,6 +42,11 @@ export class PrismaRecipesRepository implements RecipesRepository {
       description: r.description ?? null,
       authorId: r.authorId,
       createdAt: r.createdAt,
+      author: {
+        id: r.author.id,
+        name: r.author.name,
+        photoUrl: r.author.photoUrl ?? null,
+      },
     }));
 
     return { items, total, page, pageSize };
@@ -241,6 +255,7 @@ export class PrismaRecipesRepository implements RecipesRepository {
     const r = await prisma.recipe.findFirst({
       where: { id, status: 'PUBLISHED' },
       include: {
+        author: true,
         steps: { orderBy: { order: 'asc' } },
         photos: { orderBy: { order: 'asc' } },
         ingredients: { include: { ingredient: true } },
@@ -255,6 +270,7 @@ export class PrismaRecipesRepository implements RecipesRepository {
     const r = await prisma.recipe.findFirst({
       where: { id, authorId },
       include: {
+        author: true,
         steps: { orderBy: { order: 'asc' } },
         photos: { orderBy: { order: 'asc' } },
         ingredients: { include: { ingredient: true } },
@@ -396,6 +412,13 @@ export class PrismaRecipesRepository implements RecipesRepository {
           description: true,
           authorId: true,
           createdAt: true,
+          author: {
+            select: {
+              id: true,
+              name: true,
+              photoUrl: true,
+            },
+          },
         },
       }),
     ]);
@@ -406,6 +429,11 @@ export class PrismaRecipesRepository implements RecipesRepository {
       description: r.description ?? null,
       authorId: r.authorId,
       createdAt: r.createdAt,
+      author: {
+        id: r.author.id,
+        name: r.author.name,
+        photoUrl: r.author.photoUrl ?? null,
+      },
     }));
 
     return { items, total, page, pageSize };
@@ -417,6 +445,11 @@ export class PrismaRecipesRepository implements RecipesRepository {
       title: r.title,
       description: r.description ?? null,
       authorId: r.authorId,
+      author: {
+        id: r.author.id,
+        name: r.author.name,
+        photoUrl: r.author.photoUrl ?? null,
+      },
       difficulty: r.difficulty ?? null,
       prepMinutes: r.prepMinutes ?? null,
       cookMinutes: r.cookMinutes ?? null,
