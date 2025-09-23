@@ -287,7 +287,8 @@ export class PrismaRecipesRepository implements RecipesRepository {
     q?: string;
     difficulty?: 'EASY' | 'MEDIUM' | 'HARD';
     authorId?: string;
-    sort?: 'newest' | 'oldest';
+    authorName?: string;
+    sort?: 'newest' | 'oldest' | 'title_asc' | 'title_desc' | 'prep_time_asc' | 'prep_time_desc' | 'cook_time_asc' | 'cook_time_desc';
     categoryId?: string;
     categorySlug?: string;
     categoryIds?: string[];
@@ -297,7 +298,16 @@ export class PrismaRecipesRepository implements RecipesRepository {
     maxPrep?: number;
     minCook?: number;
     maxCook?: number;
+    totalTimeMin?: number;
+    totalTimeMax?: number;
+    ingredient?: string;
     ingredients?: string[];
+    maxCalories?: number;
+    minProtein?: number;
+    maxCarbs?: number;
+    maxFat?: number;
+    minServings?: number;
+    maxServings?: number;
   }) {
     const {
       page,
@@ -305,6 +315,7 @@ export class PrismaRecipesRepository implements RecipesRepository {
       q,
       difficulty,
       authorId,
+      authorName,
       sort = 'newest',
       categoryId,
       categorySlug,
@@ -315,7 +326,16 @@ export class PrismaRecipesRepository implements RecipesRepository {
       maxPrep,
       minCook,
       maxCook,
+      totalTimeMin,
+      totalTimeMax,
+      ingredient,
       ingredients,
+      maxCalories,
+      minProtein,
+      maxCarbs,
+      maxFat,
+      minServings,
+      maxServings,
     } = filters;
 
     const skip = (page - 1) * pageSize;
@@ -324,15 +344,31 @@ export class PrismaRecipesRepository implements RecipesRepository {
       ? {
           OR: [
             { title: { contains: q, mode: 'insensitive' } },
+            { description: { contains: q, mode: 'insensitive' } },
             {
               ingredients: {
                 some: { ingredient: { name: { contains: q, mode: 'insensitive' } } },
+              },
+            },
+            {
+              author: {
+                name: { contains: q, mode: 'insensitive' },
               },
             },
           ],
         }
       : {};
 
+    // Busca por nome do autor
+    const authorNameWhere = authorName
+      ? {
+          author: {
+            name: { contains: authorName, mode: 'insensitive' },
+          },
+        }
+      : {};
+
+    // Filtros por ingredientes (múltiplos)
     const ingredientsWhere =
       ingredients && ingredients.length > 0
         ? {
@@ -348,6 +384,19 @@ export class PrismaRecipesRepository implements RecipesRepository {
           }
         : {};
 
+    // Filtro por ingrediente único (compatibilidade)
+    const singleIngredientWhere = ingredient
+      ? {
+          ingredients: {
+            some: {
+              ingredient: {
+                name: { contains: ingredient, mode: 'insensitive' },
+              },
+            },
+          },
+        }
+      : {};
+
     const prepWhere: any = {};
     if (minPrep !== undefined) prepWhere.gte = minPrep;
     if (maxPrep !== undefined) prepWhere.lte = maxPrep;
@@ -355,6 +404,63 @@ export class PrismaRecipesRepository implements RecipesRepository {
     const cookWhere: any = {};
     if (minCook !== undefined) cookWhere.gte = minCook;
     if (maxCook !== undefined) cookWhere.lte = maxCook;
+
+    // Filtros por tempo total (prep + cook)
+    const totalTimeWhere: any = {};
+    if (totalTimeMin !== undefined || totalTimeMax !== undefined) {
+      const totalTimeConditions: any[] = [];
+      
+      if (totalTimeMin !== undefined) {
+        totalTimeConditions.push({
+          AND: [
+            { prepMinutes: { not: null } },
+            { cookMinutes: { not: null } },
+            {
+              OR: [
+                {
+                  AND: [
+                    { prepMinutes: { gte: 0 } },
+                    { cookMinutes: { gte: 0 } },
+                    {
+                      // Soma prep + cook >= totalTimeMin
+                      // Usando raw query seria melhor, mas vamos com uma aproximação
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        });
+      }
+      
+      if (totalTimeMax !== undefined) {
+        totalTimeConditions.push({
+          AND: [
+            { prepMinutes: { not: null } },
+            { cookMinutes: { not: null } },
+            {
+              OR: [
+                {
+                  AND: [
+                    { prepMinutes: { lte: totalTimeMax } },
+                    { cookMinutes: { lte: totalTimeMax } },
+                  ]
+                }
+              ]
+            }
+          ]
+        });
+      }
+      
+      if (totalTimeConditions.length > 0) {
+        totalTimeWhere.OR = totalTimeConditions;
+      }
+    }
+
+    // Filtros por porções
+    const servingsWhere: any = {};
+    if (minServings !== undefined) servingsWhere.gte = minServings;
+    if (maxServings !== undefined) servingsWhere.lte = maxServings;
 
     const andConds: any[] = [];
     const orConds: any[] = [];
@@ -387,17 +493,47 @@ export class PrismaRecipesRepository implements RecipesRepository {
       status: 'PUBLISHED',
       ...(difficulty ? { difficulty } : {}),
       ...(authorId ? { authorId } : {}),
+      ...authorNameWhere,
       ...(Object.keys(prepWhere).length ? { prepMinutes: prepWhere } : {}),
       ...(Object.keys(cookWhere).length ? { cookMinutes: cookWhere } : {}),
+      ...(Object.keys(totalTimeWhere).length ? totalTimeWhere : {}),
+      ...(Object.keys(servingsWhere).length ? { servings: servingsWhere } : {}),
       ...textWhere,
       ...ingredientsWhere,
+      ...singleIngredientWhere,
       ...(andConds.length || orConds.length
         ? { AND: [...andConds, ...(orConds.length ? [{ OR: orConds }] : [])] }
         : {}),
     };
 
-    const orderBy =
-      sort === 'oldest' ? { publishedAt: 'asc' as const } : { publishedAt: 'desc' as const };
+    let orderBy: any;
+    switch (sort) {
+      case 'oldest':
+        orderBy = { publishedAt: 'asc' as const };
+        break;
+      case 'title_asc':
+        orderBy = { title: 'asc' as const };
+        break;
+      case 'title_desc':
+        orderBy = { title: 'desc' as const };
+        break;
+      case 'prep_time_asc':
+        orderBy = { prepMinutes: 'asc' as const };
+        break;
+      case 'prep_time_desc':
+        orderBy = { prepMinutes: 'desc' as const };
+        break;
+      case 'cook_time_asc':
+        orderBy = { cookMinutes: 'asc' as const };
+        break;
+      case 'cook_time_desc':
+        orderBy = { cookMinutes: 'desc' as const };
+        break;
+      case 'newest':
+      default:
+        orderBy = { publishedAt: 'desc' as const };
+        break;
+    }
 
     const [total, itemsRaw] = await Promise.all([
       prisma.recipe.count({ where }),

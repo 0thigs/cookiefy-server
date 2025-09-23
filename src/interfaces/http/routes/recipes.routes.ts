@@ -90,6 +90,7 @@ export async function recipesRoutes(app: FastifyInstance) {
         q,
         difficulty,
         authorId,
+        authorName,
         sort,
         categoryId,
         categorySlug,
@@ -100,11 +101,20 @@ export async function recipesRoutes(app: FastifyInstance) {
         maxPrep,
         minCook,
         maxCook,
+        totalTimeMin,
+        totalTimeMax,
         ingredient,
+        ingredients,
+        maxCalories,
+        minProtein,
+        maxCarbs,
+        maxFat,
+        minServings,
+        maxServings,
       } = publicListQuerySchema.parse(req.query);
 
-      const ingredients = ingredient
-        ? ingredient
+      const ingredientsList = ingredients
+        ? ingredients
             .split(',')
             .map((s) => s.trim())
             .filter(Boolean)
@@ -135,6 +145,7 @@ export async function recipesRoutes(app: FastifyInstance) {
         q,
         difficulty,
         authorId,
+        authorName,
         sort,
         categoryId,
         categorySlug,
@@ -145,7 +156,16 @@ export async function recipesRoutes(app: FastifyInstance) {
         maxPrep,
         minCook,
         maxCook,
-        ingredients,
+        totalTimeMin,
+        totalTimeMax,
+        ingredient,
+        ingredients: ingredientsList,
+        maxCalories,
+        minProtein,
+        maxCarbs,
+        maxFat,
+        minServings,
+        maxServings,
       });
       return {
         data: result.items.map((r) => ({

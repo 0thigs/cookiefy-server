@@ -163,21 +163,43 @@ export const paginatedRecipesOut = z.object({
 });
 
 export const publicListQuerySchema = paginationQuerySchema.extend({
+  // Busca por texto (nome da receita, ingredientes, descrição)
   q: z.string().min(1).optional(),
+  
+  // Filtros básicos
   difficulty: DifficultyEnum.optional(),
   authorId: z.string().min(1).optional(),
-  sort: z.enum(['newest', 'oldest']).default('newest'),
+  authorName: z.string().min(1).optional(), // Busca por nome do autor
+  
+  // Ordenação
+  sort: z.enum(['newest', 'oldest', 'title_asc', 'title_desc', 'prep_time_asc', 'prep_time_desc', 'cook_time_asc', 'cook_time_desc']).default('newest'),
 
+  // Filtros por categoria
   categoryId: z.string().min(1).optional(),
   categorySlug: z.string().min(1).optional(),
-
   categoryIds: z.string().min(1).optional(),
   categorySlugs: z.string().min(1).optional(),
   categoryMatch: z.enum(['any', 'all']).default('any'),
 
+  // Filtros por tempo
   minPrep: z.coerce.number().min(0).optional(),
   maxPrep: z.coerce.number().min(0).optional(),
   minCook: z.coerce.number().min(0).optional(),
   maxCook: z.coerce.number().min(0).optional(),
+  totalTimeMin: z.coerce.number().min(0).optional(), // Tempo total mínimo
+  totalTimeMax: z.coerce.number().min(0).optional(), // Tempo total máximo
+  
+  // Filtros por ingredientes
   ingredient: z.string().min(1).optional(),
+  ingredients: z.string().min(1).optional(), // Múltiplos ingredientes separados por vírgula
+  
+  // Filtros por valor nutricional
+  maxCalories: z.coerce.number().min(0).optional(),
+  minProtein: z.coerce.number().min(0).optional(),
+  maxCarbs: z.coerce.number().min(0).optional(),
+  maxFat: z.coerce.number().min(0).optional(),
+  
+  // Filtros por porções
+  minServings: z.coerce.number().min(1).optional(),
+  maxServings: z.coerce.number().min(1).optional(),
 });
