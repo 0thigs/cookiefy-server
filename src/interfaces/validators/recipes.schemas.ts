@@ -71,8 +71,10 @@ export const createRecipeFullSchema = z.object({
       z.object({
         ingredientId: z.string().optional(),
         name: z.string().optional(),
-        amount: z.number().nullable().optional(),
+        amount: z.number().min(0).nullable().optional(),
         unit: z.string().nullable().optional(),
+      }).refine((v) => !!v.ingredientId || !!v.name, {
+        message: 'Informe "ingredientId" ou "name" em cada ingrediente',
       }),
     )
     .optional(),
@@ -107,6 +109,7 @@ export const recipeBriefOut = z.object({
   authorId: z.string(),
   author: authorInfoSchema,
   createdAt: z.string().datetime(),
+  isFavorited: z.boolean().optional(),
 });
 
 export const recipeDetailOut = z.object({
@@ -123,6 +126,7 @@ export const recipeDetailOut = z.object({
   status: RecipeStatusEnum,
   publishedAt: z.string().datetime().nullable().optional(),
   createdAt: z.string().datetime(),
+  isFavorited: z.boolean().optional(),
   steps: z.array(
     z.object({
       order: z.number().int(),

@@ -251,7 +251,7 @@ export class PrismaRecipesRepository implements RecipesRepository {
     if (r.count === 0) throw new Error('NOT_FOUND');
   }
 
-  async findPublicById(id: string) {
+  async findPublicById(id: string, userId?: string) {
     const r = await prisma.recipe.findFirst({
       where: { id, status: 'PUBLISHED' },
       include: {
@@ -260,6 +260,9 @@ export class PrismaRecipesRepository implements RecipesRepository {
         photos: { orderBy: { order: 'asc' } },
         ingredients: { include: { ingredient: true } },
         categories: { include: { category: true } },
+        favorites: userId ? {
+          where: { userId },
+        } : false,
       },
     });
     if (!r) return null;
@@ -308,6 +311,7 @@ export class PrismaRecipesRepository implements RecipesRepository {
     maxFat?: number;
     minServings?: number;
     maxServings?: number;
+    userId?: string; // Para verificar se é favorito
   }) {
     const {
       page,
@@ -336,6 +340,7 @@ export class PrismaRecipesRepository implements RecipesRepository {
       maxFat,
       minServings,
       maxServings,
+      userId,
     } = filters;
 
     const skip = (page - 1) * pageSize;
@@ -555,11 +560,14 @@ export class PrismaRecipesRepository implements RecipesRepository {
               photoUrl: true,
             },
           },
+          favorites: userId ? {
+            where: { userId },
+          } : false,
         },
       }),
     ]);
 
-    const items = itemsRaw.map((r) => ({
+    const items = itemsRaw.map((r: any) => ({
       id: r.id,
       title: r.title,
       description: r.description ?? null,
@@ -570,6 +578,7 @@ export class PrismaRecipesRepository implements RecipesRepository {
         name: r.author.name,
         photoUrl: r.author.photoUrl ?? null,
       },
+      isFavorited: userId ? (r.favorites && r.favorites.length > 0) : undefined,
     }));
 
     return { items, total, page, pageSize };
@@ -594,6 +603,7 @@ export class PrismaRecipesRepository implements RecipesRepository {
       status: r.status,
       publishedAt: r.publishedAt ?? null,
       createdAt: r.createdAt,
+      isFavorited: r.favorites ? (r.favorites.length > 0) : undefined,
       steps: r.steps.map((s: any) => ({
         order: s.order,
         text: s.text,
