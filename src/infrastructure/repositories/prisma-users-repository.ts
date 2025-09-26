@@ -56,6 +56,10 @@ export class PrismaUsersRepository implements UsersRepository {
     return map(u);
   }
 
+  async delete(id: string): Promise<void> {
+    await prisma.user.delete({ where: { id } });
+  }
+
   async getPublicProfile(id: string) {
     const u = await prisma.user.findUnique({
       where: { id },

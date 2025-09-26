@@ -41,6 +41,15 @@ export async function usersRoutes(app: FastifyInstance) {
     };
   });
 
+  app.delete('/me', { preHandler: [app.authenticate] }, async (req, reply) => {
+    const userId = (req.user as any).sub as string;
+    const user = await usersRepo.findById(userId);
+    if (!user) return reply.notFound('Usuário não encontrado');
+
+    await usersRepo.delete(userId);
+    return reply.send({ message: 'Conta excluída com sucesso' });
+  });
+
   app.get('/:id', async (req, reply) => {
     const { id } = req.params as { id: string };
     const data = await usersRepo.getPublicProfile(id);
