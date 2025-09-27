@@ -8,6 +8,11 @@ export interface RecipesRepository {
     pagination: { page: number; pageSize: number },
   ): Promise<{ items: Recipe[]; total: number; page: number; pageSize: number }>;
 
+  listDraftsByAuthor(
+    authorId: string,
+    pagination: { page: number; pageSize: number },
+  ): Promise<{ items: Recipe[]; total: number; page: number; pageSize: number }>;
+
   createWithNested(data: {
     authorId: string;
     title: string;
@@ -57,6 +62,7 @@ export interface RecipesRepository {
 
   findPublicById(id: string): Promise<any | null>;
   findByIdForAuthor(id: string, authorId: string): Promise<any | null>;
+  findDraftByIdForAuthor(id: string, authorId: string): Promise<any | null>;
 
   listPublic(filters: {
     page: number;

@@ -53,7 +53,7 @@ export async function recipesRoutes(app: FastifyInstance) {
         });
       } catch (error: any) {
         console.error('Erro ao criar receita:', error);
-        
+
         // Se for erro de validação do Zod
         if (error.issues) {
           return reply.status(400).send({
@@ -61,7 +61,7 @@ export async function recipesRoutes(app: FastifyInstance) {
             errors: error.issues,
           });
         }
-        
+
         // Se for erro do Prisma
         if (error.code) {
           return reply.status(400).send({
@@ -69,7 +69,7 @@ export async function recipesRoutes(app: FastifyInstance) {
             code: error.code,
           });
         }
-        
+
         // Outros erros
         return reply.status(500).send({
           message: 'Erro interno do servidor',
@@ -99,6 +99,41 @@ export async function recipesRoutes(app: FastifyInstance) {
           title: r.title,
           description: r.description ?? null,
           authorId: r.authorId,
+          status: r.status,
+          author: {
+            id: r.author.id,
+            name: r.author.name,
+            photoUrl: r.author.photoUrl ?? null,
+          },
+          createdAt: r.createdAt.toISOString(),
+        })),
+        meta: { page: result.page, pageSize: result.pageSize, total: result.total },
+      };
+    },
+  );
+
+  // Nova rota para listar apenas rascunhos do autor
+  app.get(
+    '/drafts',
+    {
+      preHandler: [app.authenticate],
+      schema: {
+        tags: ['Recipes'],
+        querystring: paginationQuerySchema,
+        response: { 200: paginatedRecipesOut },
+      },
+    },
+    async (req) => {
+      const authorId = (req.user as any).sub as string;
+      const { page, pageSize } = paginationQuerySchema.parse(req.query);
+      const result = await recipesRepo.listDraftsByAuthor(authorId, { page, pageSize });
+      return {
+        data: result.items.map((r) => ({
+          id: r.id,
+          title: r.title,
+          description: r.description ?? null,
+          authorId: r.authorId,
+          status: r.status,
           author: {
             id: r.author.id,
             name: r.author.name,
@@ -157,27 +192,27 @@ export async function recipesRoutes(app: FastifyInstance) {
 
       const ingredientsList = ingredients
         ? ingredients
-            .split(',')
-            .map((s) => s.trim())
-            .filter(Boolean)
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
         : undefined;
 
       const catIds = [
         ...(categoryId ? [categoryId] : []),
         ...(categoryIds
           ? categoryIds
-              .split(',')
-              .map((s) => s.trim())
-              .filter(Boolean)
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean)
           : []),
       ];
       const catSlugs = [
         ...(categorySlug ? [categorySlug] : []),
         ...(categorySlugs
           ? categorySlugs
-              .split(',')
-              .map((s) => s.trim())
-              .filter(Boolean)
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean)
           : []),
       ];
 
@@ -271,27 +306,27 @@ export async function recipesRoutes(app: FastifyInstance) {
 
       const ingredientsList = ingredients
         ? ingredients
-            .split(',')
-            .map((s) => s.trim())
-            .filter(Boolean)
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
         : undefined;
 
       const catIds = [
         ...(categoryId ? [categoryId] : []),
         ...(categoryIds
           ? categoryIds
-              .split(',')
-              .map((s) => s.trim())
-              .filter(Boolean)
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean)
           : []),
       ];
       const catSlugs = [
         ...(categorySlug ? [categorySlug] : []),
         ...(categorySlugs
           ? categorySlugs
-              .split(',')
-              .map((s) => s.trim())
-              .filter(Boolean)
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean)
           : []),
       ];
 
@@ -359,6 +394,30 @@ export async function recipesRoutes(app: FastifyInstance) {
       const userId = (req.user as any)?.sub;
       const detail = await recipesRepo.findPublicById(id, userId);
       if (!detail) return reply.notFound('Receita não encontrada');
+      return {
+        ...detail,
+        createdAt: detail.createdAt.toISOString(),
+        publishedAt: detail.publishedAt ? new Date(detail.publishedAt).toISOString() : null,
+      };
+    },
+  );
+
+  // Nova rota para obter detalhes de um rascunho específico
+  app.get(
+    '/drafts/:id',
+    {
+      preHandler: [app.authenticate],
+      schema: {
+        tags: ['Recipes'],
+        params: z.object({ id: z.string().min(1) }),
+        response: { 200: recipeDetailOut },
+      },
+    },
+    async (req, reply) => {
+      const { id } = req.params as { id: string };
+      const authorId = (req.user as any).sub as string;
+      const detail = await recipesRepo.findDraftByIdForAuthor(id, authorId);
+      if (!detail) return reply.notFound('Rascunho de receita não encontrado');
       return {
         ...detail,
         createdAt: detail.createdAt.toISOString(),

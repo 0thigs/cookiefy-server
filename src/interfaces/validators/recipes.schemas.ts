@@ -108,6 +108,7 @@ export const recipeBriefOut = z.object({
   description: z.string().nullable().optional(),
   authorId: z.string(),
   author: authorInfoSchema,
+  status: RecipeStatusEnum.optional(), // Para mostrar status nos rascunhos
   createdAt: z.string().datetime(),
   isFavorited: z.boolean().optional(),
 });
@@ -169,12 +170,12 @@ export const paginatedRecipesOut = z.object({
 export const publicListQuerySchema = paginationQuerySchema.extend({
   // Busca por texto (nome da receita, ingredientes, descrição)
   q: z.string().min(1).optional(),
-  
+
   // Filtros básicos
   difficulty: DifficultyEnum.optional(),
   authorId: z.string().min(1).optional(),
   authorName: z.string().min(1).optional(), // Busca por nome do autor
-  
+
   // Ordenação
   sort: z.enum(['newest', 'oldest', 'title_asc', 'title_desc', 'prep_time_asc', 'prep_time_desc', 'cook_time_asc', 'cook_time_desc']).default('newest'),
 
@@ -192,17 +193,17 @@ export const publicListQuerySchema = paginationQuerySchema.extend({
   maxCook: z.coerce.number().min(0).optional(),
   totalTimeMin: z.coerce.number().min(0).optional(), // Tempo total mínimo
   totalTimeMax: z.coerce.number().min(0).optional(), // Tempo total máximo
-  
+
   // Filtros por ingredientes
   ingredient: z.string().min(1).optional(),
   ingredients: z.string().min(1).optional(), // Múltiplos ingredientes separados por vírgula
-  
+
   // Filtros por valor nutricional
   maxCalories: z.coerce.number().min(0).optional(),
   minProtein: z.coerce.number().min(0).optional(),
   maxCarbs: z.coerce.number().min(0).optional(),
   maxFat: z.coerce.number().min(0).optional(),
-  
+
   // Filtros por porções
   minServings: z.coerce.number().min(1).optional(),
   maxServings: z.coerce.number().min(1).optional(),

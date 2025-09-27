@@ -42,6 +42,47 @@ export class PrismaRecipesRepository implements RecipesRepository {
       description: r.description ?? null,
       authorId: r.authorId,
       createdAt: r.createdAt,
+      status: r.status,
+      author: {
+        id: r.author.id,
+        name: r.author.name,
+        photoUrl: r.author.photoUrl ?? null,
+      },
+    }));
+
+    return { items, total, page, pageSize };
+  }
+
+  async listDraftsByAuthor(authorId: string, pagination: { page: number; pageSize: number }) {
+    const { page, pageSize } = pagination;
+    const skip = (page - 1) * pageSize;
+
+    const [total, itemsRaw] = await Promise.all([
+      prisma.recipe.count({ where: { authorId, status: 'DRAFT' } }),
+      prisma.recipe.findMany({
+        where: { authorId, status: 'DRAFT' },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: pageSize,
+        include: {
+          author: {
+            select: {
+              id: true,
+              name: true,
+              photoUrl: true,
+            },
+          },
+        },
+      }),
+    ]);
+
+    const items = itemsRaw.map((r) => ({
+      id: r.id,
+      title: r.title,
+      description: r.description ?? null,
+      authorId: r.authorId,
+      createdAt: r.createdAt,
+      status: r.status,
       author: {
         id: r.author.id,
         name: r.author.name,
@@ -84,39 +125,39 @@ export class PrismaRecipesRepository implements RecipesRepository {
         steps:
           data.steps && data.steps.length > 0
             ? {
-                create: data.steps.map((s) => ({
-                  order: s.order,
-                  text: s.text,
-                  durationSec: s.durationSec ?? null,
-                })),
-              }
+              create: data.steps.map((s) => ({
+                order: s.order,
+                text: s.text,
+                durationSec: s.durationSec ?? null,
+              })),
+            }
             : undefined,
         photos:
           data.photos && data.photos.length > 0
             ? {
-                create: data.photos.map((p) => ({
-                  url: p.url,
-                  alt: p.alt ?? null,
-                  order: p.order ?? 0,
-                })),
-              }
+              create: data.photos.map((p) => ({
+                url: p.url,
+                alt: p.alt ?? null,
+                order: p.order ?? 0,
+              })),
+            }
             : undefined,
         ingredients:
           data.ingredients && data.ingredients.length > 0
             ? {
-                create: data.ingredients.map((i) => ({
-                  amount: i.amount ?? null,
-                  unit: i.unit ?? null,
-                  ingredient: i.ingredientId
-                    ? { connect: { id: i.ingredientId } }
-                    : {
-                        connectOrCreate: {
-                          where: { name: i.name! },
-                          create: { name: i.name! },
-                        },
-                      },
-                })),
-              }
+              create: data.ingredients.map((i) => ({
+                amount: i.amount ?? null,
+                unit: i.unit ?? null,
+                ingredient: i.ingredientId
+                  ? { connect: { id: i.ingredientId } }
+                  : {
+                    connectOrCreate: {
+                      where: { name: i.name! },
+                      create: { name: i.name! },
+                    },
+                  },
+              })),
+            }
             : undefined,
         categories:
           data.categories && data.categories.length > 0
@@ -284,6 +325,21 @@ export class PrismaRecipesRepository implements RecipesRepository {
     return this.mapDetail(r);
   }
 
+  async findDraftByIdForAuthor(id: string, authorId: string) {
+    const r = await prisma.recipe.findFirst({
+      where: { id, authorId, status: 'DRAFT' },
+      include: {
+        author: true,
+        steps: { orderBy: { order: 'asc' } },
+        photos: { orderBy: { order: 'asc' } },
+        ingredients: { include: { ingredient: true } },
+        categories: { include: { category: true } },
+      },
+    });
+    if (!r) return null;
+    return this.mapDetail(r);
+  }
+
   async listPublic(filters: {
     page: number;
     pageSize: number;
@@ -347,59 +403,59 @@ export class PrismaRecipesRepository implements RecipesRepository {
 
     const textWhere = q
       ? {
-          OR: [
-            { title: { contains: q, mode: 'insensitive' } },
-            { description: { contains: q, mode: 'insensitive' } },
-            {
-              ingredients: {
-                some: { ingredient: { name: { contains: q, mode: 'insensitive' } } },
-              },
+        OR: [
+          { title: { contains: q, mode: 'insensitive' } },
+          { description: { contains: q, mode: 'insensitive' } },
+          {
+            ingredients: {
+              some: { ingredient: { name: { contains: q, mode: 'insensitive' } } },
             },
-            {
-              author: {
-                name: { contains: q, mode: 'insensitive' },
-              },
+          },
+          {
+            author: {
+              name: { contains: q, mode: 'insensitive' },
             },
-          ],
-        }
+          },
+        ],
+      }
       : {};
 
     // Busca por nome do autor
     const authorNameWhere = authorName
       ? {
-          author: {
-            name: { contains: authorName, mode: 'insensitive' },
-          },
-        }
+        author: {
+          name: { contains: authorName, mode: 'insensitive' },
+        },
+      }
       : {};
 
     // Filtros por ingredientes (múltiplos)
     const ingredientsWhere =
       ingredients && ingredients.length > 0
         ? {
-            AND: ingredients.map((name) => ({
-              ingredients: {
-                some: {
-                  ingredient: {
-                    name: { contains: name, mode: 'insensitive' },
-                  },
+          AND: ingredients.map((name) => ({
+            ingredients: {
+              some: {
+                ingredient: {
+                  name: { contains: name, mode: 'insensitive' },
                 },
               },
-            })),
-          }
+            },
+          })),
+        }
         : {};
 
     // Filtro por ingrediente único (compatibilidade)
     const singleIngredientWhere = ingredient
       ? {
-          ingredients: {
-            some: {
-              ingredient: {
-                name: { contains: ingredient, mode: 'insensitive' },
-              },
+        ingredients: {
+          some: {
+            ingredient: {
+              name: { contains: ingredient, mode: 'insensitive' },
             },
           },
-        }
+        },
+      }
       : {};
 
     const prepWhere: any = {};
@@ -414,7 +470,7 @@ export class PrismaRecipesRepository implements RecipesRepository {
     const totalTimeWhere: any = {};
     if (totalTimeMin !== undefined || totalTimeMax !== undefined) {
       const totalTimeConditions: any[] = [];
-      
+
       if (totalTimeMin !== undefined) {
         totalTimeConditions.push({
           AND: [
@@ -437,7 +493,7 @@ export class PrismaRecipesRepository implements RecipesRepository {
           ]
         });
       }
-      
+
       if (totalTimeMax !== undefined) {
         totalTimeConditions.push({
           AND: [
@@ -456,7 +512,7 @@ export class PrismaRecipesRepository implements RecipesRepository {
           ]
         });
       }
-      
+
       if (totalTimeConditions.length > 0) {
         totalTimeWhere.OR = totalTimeConditions;
       }
