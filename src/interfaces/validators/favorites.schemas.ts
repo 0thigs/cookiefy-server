@@ -83,6 +83,7 @@ export const favoriteRecipeOut = z.object({
   }),
   createdAt: z.string().datetime(),
   favoritedAt: z.string().datetime(),
+  nutrition: z.record(z.any()).nullable(),
   ingredients: z.array(z.object({
     ingredientId: z.string(),
     name: z.string(),

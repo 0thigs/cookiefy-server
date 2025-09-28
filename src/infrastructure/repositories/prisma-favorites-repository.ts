@@ -267,6 +267,17 @@ export class PrismaFavoritesRepository implements FavoritesRepository {
       }
     }
 
+    // Filtro de calorias
+    let nutritionCaloriesWhere: any = {};
+    if (maxCalories !== undefined) {
+      nutritionCaloriesWhere = {
+        nutrition: {
+          path: ['calories'],
+          lte: maxCalories,
+        },
+      };
+    }
+
     // Construir WHERE final
     const where: any = {
       userId,
@@ -277,6 +288,7 @@ export class PrismaFavoritesRepository implements FavoritesRepository {
         ...(Object.keys(prepWhere).length ? { prepMinutes: prepWhere } : {}),
         ...(Object.keys(cookWhere).length ? { cookMinutes: cookWhere } : {}),
         ...(Object.keys(servingsWhere).length ? { servings: servingsWhere } : {}),
+        ...(maxCalories !== undefined ? { nutrition: { path: ['calories'], lte: maxCalories } } : {}),
       },
       ...textWhere,
       ...authorNameWhere,
@@ -336,6 +348,7 @@ export class PrismaFavoritesRepository implements FavoritesRepository {
               description: true,
               authorId: true,
               createdAt: true,
+              nutrition: true,
               author: {
                 select: {
                   id: true,
@@ -366,6 +379,7 @@ export class PrismaFavoritesRepository implements FavoritesRepository {
       },
       createdAt: r.recipe.createdAt,
       favoritedAt: r.createdAt,
+      nutrition: r.recipe.nutrition ?? null,
       ingredients: r.recipe.ingredients.map((ri: any) => ({
         ingredientId: ri.ingredientId,
         name: ri.ingredient.name,
