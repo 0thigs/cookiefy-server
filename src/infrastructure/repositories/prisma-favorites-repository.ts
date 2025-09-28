@@ -29,7 +29,7 @@ export class PrismaFavoritesRepository implements FavoritesRepository {
       where: { userId, recipeId },
       select: { createdAt: true },
     });
-    
+
     return {
       isFavorited: !!favorite,
       favoritedAt: favorite?.createdAt || null,
@@ -161,68 +161,68 @@ export class PrismaFavoritesRepository implements FavoritesRepository {
     // Construir filtros de texto
     const textWhere = q
       ? {
-          OR: [
-            { recipe: { title: { contains: q, mode: 'insensitive' } } },
-            { recipe: { description: { contains: q, mode: 'insensitive' } } },
-            {
-              recipe: {
-                ingredients: {
-                  some: { ingredient: { name: { contains: q, mode: 'insensitive' } } },
-                },
+        OR: [
+          { recipe: { title: { contains: q, mode: 'insensitive' } } },
+          { recipe: { description: { contains: q, mode: 'insensitive' } } },
+          {
+            recipe: {
+              ingredients: {
+                some: { ingredient: { name: { contains: q, mode: 'insensitive' } } },
               },
             },
-            {
-              recipe: {
-                author: {
-                  name: { contains: q, mode: 'insensitive' },
-                },
+          },
+          {
+            recipe: {
+              author: {
+                name: { contains: q, mode: 'insensitive' },
               },
             },
-          ],
-        }
+          },
+        ],
+      }
       : {};
 
     // Busca por nome do autor
     const authorNameWhere = authorName
       ? {
-          recipe: {
-            author: {
-              name: { contains: authorName, mode: 'insensitive' },
-            },
+        recipe: {
+          author: {
+            name: { contains: authorName, mode: 'insensitive' },
           },
-        }
+        },
+      }
       : {};
 
     // Filtros por ingredientes
     const ingredientsWhere =
       ingredients && ingredients.length > 0
         ? {
-            recipe: {
-              AND: ingredients.map((name) => ({
-                ingredients: {
-                  some: {
-                    ingredient: {
-                      name: { contains: name, mode: 'insensitive' },
-                    },
+          recipe: {
+            AND: ingredients.map((name) => ({
+              ingredients: {
+                some: {
+                  ingredient: {
+                    name: { contains: name, mode: 'insensitive' },
                   },
                 },
-              })),
-            },
-          }
+              },
+            })),
+          },
+        }
         : {};
 
     const singleIngredientWhere = ingredient
       ? {
-          recipe: {
-            ingredients: {
-              some: {
-                ingredient: {
-                  name: { contains: ingredient, mode: 'insensitive' },
-                },
+        recipe: {
+          ingredients: {
+            some: {
+              ingredient: {
+                name: { contains: ingredient, mode: 'insensitive' },
               },
             },
           },
-        }
+        },
+      }
       : {};
 
     // Filtros por tempo
@@ -419,7 +419,7 @@ export class PrismaFavoritesRepository implements FavoritesRepository {
         take: 1,
       }).then(async (result) => {
         if (result.length === 0) return null;
-        
+
         const mostFavoritedRecipe = await prisma.recipe.findFirst({
           where: { id: result[0]?.recipeId },
           select: {
@@ -433,7 +433,7 @@ export class PrismaFavoritesRepository implements FavoritesRepository {
             },
           },
         });
-        
+
         return mostFavoritedRecipe?.categories[0]?.category.name || null;
       }),
     ]);

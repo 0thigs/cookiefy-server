@@ -11,19 +11,19 @@ export const favoriteStatusOut = z.object({
 export const favoritesListQuerySchema = paginationQuerySchema.extend({
   // Busca por texto (nome da receita, ingredientes, descrição)
   q: z.string().min(1).optional(),
-  
+
   // Filtros básicos
   difficulty: z.enum(['EASY', 'MEDIUM', 'HARD']).optional(),
   authorId: z.string().min(1).optional(),
   authorName: z.string().min(1).optional(),
-  
+
   // Ordenação (incluindo opções de receitas + favoritos)
   sort: z.enum([
-    'newest', 
-    'oldest', 
-    'title_asc', 
-    'title_desc', 
-    'prep_time_asc', 
+    'newest',
+    'oldest',
+    'title_asc',
+    'title_desc',
+    'prep_time_asc',
     'prep_time_desc',
     'cook_time_asc',
     'cook_time_desc',
@@ -51,20 +51,20 @@ export const favoritesListQuerySchema = paginationQuerySchema.extend({
   maxCook: z.coerce.number().min(0).optional(),
   totalTimeMin: z.coerce.number().min(0).optional(),
   totalTimeMax: z.coerce.number().min(0).optional(),
-  
+
   // Filtros por ingredientes
   ingredient: z.string().min(1).optional(),
   ingredients: z.union([
     z.string().min(1).transform(val => val.split(',').map(s => s.trim())),
     z.array(z.string()).min(1)
   ]).optional(),
-  
+
   // Filtros por valor nutricional
   maxCalories: z.coerce.number().min(0).optional(),
   minProtein: z.coerce.number().min(0).optional(),
   maxCarbs: z.coerce.number().min(0).optional(),
   maxFat: z.coerce.number().min(0).optional(),
-  
+
   // Filtros por porções
   minServings: z.coerce.number().min(1).optional(),
   maxServings: z.coerce.number().min(1).optional(),

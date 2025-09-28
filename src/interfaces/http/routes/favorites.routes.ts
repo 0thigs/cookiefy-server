@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { PrismaFavoritesRepository } from '../../../infrastructure/repositories/prisma-favorites-repository.js';
-import { 
+import {
   favoriteStatusOut,
   favoritesListQuerySchema,
   paginatedFavoritesOut,
@@ -67,11 +67,11 @@ export async function favoritesRoutes(app: FastifyInstance) {
       const filters = favoritesListQuerySchema.parse(req.query);
 
       // Se não há filtros especiais, usar método simples
-      const hasFilters = Object.keys(filters).some(key => 
+      const hasFilters = Object.keys(filters).some(key =>
         key !== 'page' && key !== 'pageSize' && filters[key as keyof typeof filters] !== undefined
       );
 
-      const result = hasFilters 
+      const result = hasFilters
         ? await repo.listForUserWithFilters(userId, filters)
         : await repo.listForUser(userId, { page: filters.page, pageSize: filters.pageSize });
 
@@ -110,7 +110,7 @@ export async function favoritesRoutes(app: FastifyInstance) {
     async (req) => {
       const { recipeId } = req.params as { recipeId: string };
       const userId = (req.user as any).sub as string;
-      
+
       const status = await repo.getFavoriteStatus(userId, recipeId);
       return {
         isFavorited: status.isFavorited,
