@@ -21,6 +21,7 @@ import {
 } from 'fastify-type-provider-zod';
 import { categoriesRoutes } from './routes/categories.routes.js';
 import { favoritesRoutes } from './routes/favorites.routes.js';
+import { reviewsRoutes } from './routes/reviews.routes.js';
 
 export function buildServer(): FastifyInstance {
   const app = Fastify({
@@ -79,6 +80,7 @@ export function buildServer(): FastifyInstance {
   app.register(recipesRoutes, { prefix: '/recipes' });
   app.register(categoriesRoutes, { prefix: '/categories' });
   app.register(favoritesRoutes, { prefix: '/favorites' });
+  app.register(reviewsRoutes);
 
   app.setErrorHandler((err, _req, reply) => {
     const status = (err as any).statusCode ?? 500;
