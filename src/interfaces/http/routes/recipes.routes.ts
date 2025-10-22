@@ -527,4 +527,101 @@ export async function recipesRoutes(app: FastifyInstance) {
       }
     },
   );
+
+  app.get(
+    '/:id/pdf',
+    {
+      schema: {
+        tags: ['Recipes'],
+        params: z.object({ id: z.string().min(1) }),
+      },
+    },
+    async (req, reply) => {
+      const { id } = req.params as { id: string };
+      const detail = await recipesRepo.findPublicById(id);
+      if (!detail) return reply.notFound('Receita não encontrada');
+
+      try {
+        const safeDetail = {
+          id: detail.id,
+          title: detail.title,
+          description: detail.description,
+          author: detail.author ? { id: detail.author.id, name: detail.author.name } : null,
+          ingredients: (detail.ingredients || []).map((i: any) => ({ name: i.name ?? i.note ?? (i.ingredient?.name ?? null), amount: i.amount, unit: i.unit })),
+          steps: (detail.steps || []).map((s: any) => (typeof s === 'string' ? s : s.text ?? s.description ?? JSON.stringify(s))),
+          prepMinutes: detail.prepMinutes ?? null,
+          cookMinutes: detail.cookMinutes ?? null,
+          servings: detail.servings ?? null,
+        };
+        console.log('Generating PDF for recipe (safe):', JSON.stringify(safeDetail, null, 2));
+        // try to normalize nutrition object shapes
+        const rawNutrition = detail.nutrition ?? null;
+        let normalizedNutrition: any = null;
+        if (rawNutrition) {
+          // handle cases: { calories, protein, carbs, fat } or { perServing: { calories... } } or numeric strings
+          const pick = (obj: any, key: string[]) => {
+            for (const k of key) {
+              if (obj && obj[k] !== undefined && obj[k] !== null) return obj[k];
+            }
+            return undefined;
+          };
+
+          const top = rawNutrition;
+          const per = rawNutrition.perServing ?? rawNutrition.per_serving ?? rawNutrition.serving ?? null;
+
+          const maybe = (source: any) => ({
+            calories: pick(source, ['calories', 'kcal', 'energy']) ?? '-',
+            protein: pick(source, ['protein', 'proteins']) ?? '-',
+            carbs: pick(source, ['carbs', 'carbohydrates']) ?? '-',
+            fat: pick(source, ['fat', 'fats', 'lipids']) ?? '-',
+          });
+
+          normalizedNutrition = maybe(per || top);
+        }
+        console.log('Normalized nutrition:', JSON.stringify(normalizedNutrition, null, 2));
+      } catch (e) {
+        console.log('Error logging recipe detail for PDF generation', e);
+      }
+
+      const { buildRecipeHtml, generateRecipePdfFromHtml } = await import('../../../infrastructure/pdf/pdf-generator.js');
+      const html = buildRecipeHtml({
+        title: detail.title,
+        description: detail.description,
+        // choose first photo if available
+        imageUrl: detail.photos && detail.photos.length > 0 ? detail.photos[0].url : null,
+        author: detail.author ? { id: detail.author.id, name: detail.author.name, photoUrl: detail.author.photoUrl ?? null } : null,
+        ingredients: (detail.ingredients || []).map((i: any) => ({ name: i.name ?? i.note, amount: i.amount, unit: i.unit })),
+        steps: detail.steps || [],
+        nutrition: (function () {
+          const raw = detail.nutrition ?? null;
+          if (!raw) return null;
+          const pick = (obj: any, key: string[]) => {
+            for (const k of key) {
+              if (obj && obj[k] !== undefined && obj[k] !== null) return obj[k];
+            }
+            return undefined;
+          };
+          const per = raw.perServing ?? raw.per_serving ?? raw.serving ?? null;
+          const source = per || raw;
+          const val = {
+            calories: pick(source, ['calories', 'kcal', 'energy']) ?? null,
+            protein: pick(source, ['protein', 'proteins']) ?? null,
+            carbs: pick(source, ['carbs', 'carbohydrates']) ?? null,
+            fat: pick(source, ['fat', 'fats', 'lipids']) ?? null,
+          };
+          return val;
+        })(),
+      });
+
+      try {
+        const buffer = await generateRecipePdfFromHtml(html);
+        reply.header('Content-Type', 'application/pdf');
+        reply.header('Content-Disposition', `attachment; filename="${detail.title.replace(/\s+/g, '_')}.pdf"`);
+        return reply.send(buffer);
+      } catch (e: any) {
+        console.error('Erro ao gerar PDF:', e);
+        return reply.status(500).send({ message: 'Erro ao gerar PDF' });
+      }
+    },
+  );
 }
