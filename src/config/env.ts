@@ -16,6 +16,8 @@ const schema = z.object({
   RATE_LIMIT_MAX: z.coerce.number().default(100),
   RATE_LIMIT_TIME_WINDOW: z.string().default('1 minute'),
   BODY_LIMIT_MB: z.coerce.number().default(1),
+  // Nova variável
+  SUPABASE_JWT_SECRET: z.string().min(10),
 });
 
 export const env = schema.parse(process.env);
