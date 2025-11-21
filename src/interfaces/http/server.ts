@@ -9,6 +9,7 @@ import swaggerUI from '@fastify/swagger-ui';
 import { registerJWT } from '../../infrastructure/security/jwt.js';
 import { authRoutes } from './routes/auth.routes.js';
 import { exchangeRoutes } from './routes/exchange.routes.js';
+import { adminRoutes } from './routes/admin.routes.js';
 import { usersRoutes } from './routes/users.routes.js';
 import { recipesRoutes } from './routes/recipes.routes.js';
 import { env, BODY_LIMIT_BYTES, CORS_ORIGINS, IS_PROD } from '../../config/env.js';
@@ -37,8 +38,6 @@ export function buildServer(): FastifyInstance {
   app.register(helmet);
   app.register(sensible);
   app.register(cookie, {
-    // opcional: assinar cookies
-    // secret: env.COOKIE_SECRET
   });
   app.register(cors, {
     origin: CORS_ORIGINS,
@@ -79,6 +78,7 @@ export function buildServer(): FastifyInstance {
 
   app.register(authRoutes, { prefix: '/auth' });
   app.register(exchangeRoutes, { prefix: '/auth/exchange' });
+  app.register(adminRoutes, { prefix: '/admin' });
   app.register(usersRoutes, { prefix: '/users' });
   app.register(recipesRoutes, { prefix: '/recipes' });
   app.register(categoriesRoutes, { prefix: '/categories' });

@@ -33,7 +33,6 @@ export async function recipesRoutes(app: FastifyInstance) {
 
         const recipe = await recipesRepo.createWithNested({ ...input, authorId });
 
-        // Buscar dados do autor para incluir na resposta
         const author = await usersRepo.findById(authorId);
         if (!author) {
           throw new Error('Autor não encontrado');
@@ -54,7 +53,6 @@ export async function recipesRoutes(app: FastifyInstance) {
       } catch (error: any) {
         console.error('Erro ao criar receita:', error);
 
-        // Se for erro de validação do Zod
         if (error.issues) {
           return reply.status(400).send({
             message: 'Dados inválidos',
@@ -62,7 +60,6 @@ export async function recipesRoutes(app: FastifyInstance) {
           });
         }
 
-        // Se for erro do Prisma
         if (error.code) {
           return reply.status(400).send({
             message: 'Erro no banco de dados',
@@ -70,7 +67,6 @@ export async function recipesRoutes(app: FastifyInstance) {
           });
         }
 
-        // Outros erros
         return reply.status(500).send({
           message: 'Erro interno do servidor',
           error: error.message,
@@ -112,7 +108,6 @@ export async function recipesRoutes(app: FastifyInstance) {
     },
   );
 
-  // Nova rota para listar apenas rascunhos do autor
   app.get(
     '/drafts',
     {
@@ -146,7 +141,6 @@ export async function recipesRoutes(app: FastifyInstance) {
     },
   );
 
-  // Rota para usuários autenticados (com isFavorited)
   app.get(
     '/',
     {
@@ -264,7 +258,6 @@ export async function recipesRoutes(app: FastifyInstance) {
     },
   );
 
-  // Rota para usuários não autenticados (sem isFavorited)
   app.get(
     '/public',
     {
@@ -357,7 +350,6 @@ export async function recipesRoutes(app: FastifyInstance) {
         maxFat,
         minServings,
         maxServings,
-        // Sem userId - não mostra isFavorited
       });
       return {
         data: result.items.map((r) => ({
@@ -371,14 +363,12 @@ export async function recipesRoutes(app: FastifyInstance) {
             photoUrl: r.author.photoUrl ?? null,
           },
           createdAt: r.createdAt.toISOString(),
-          // isFavorited não incluído para usuários não autenticados
         })),
         meta: { page: result.page, pageSize: result.pageSize, total: result.total },
       };
     },
   );
 
-  // Rota de detalhes para usuários autenticados (com isFavorited)
   app.get(
     '/:id',
     {
@@ -392,7 +382,20 @@ export async function recipesRoutes(app: FastifyInstance) {
     async (req, reply) => {
       const { id } = req.params as { id: string };
       const userId = (req.user as any)?.sub;
-      const detail = await recipesRepo.findPublicById(id, userId);
+      
+      const user = await usersRepo.findById(userId);
+      const isAdmin = user?.role === 'ADMIN';
+
+      let detail;
+      if (isAdmin) {
+        detail = await recipesRepo.findByIdForAdmin(id);
+      } else {
+        detail = await recipesRepo.findPublicById(id, userId);
+        if (!detail) {
+          detail = await recipesRepo.findDraftByIdForAuthor(id, userId);
+        }
+      }
+
       if (!detail) return reply.notFound('Receita não encontrada');
       return {
         ...detail,
@@ -402,7 +405,6 @@ export async function recipesRoutes(app: FastifyInstance) {
     },
   );
 
-  // Nova rota para obter detalhes de um rascunho específico
   app.get(
     '/drafts/:id',
     {
@@ -426,7 +428,6 @@ export async function recipesRoutes(app: FastifyInstance) {
     },
   );
 
-  // Rota de detalhes para usuários não autenticados (sem isFavorited)
   app.get(
     '/:id/public',
     {
@@ -438,7 +439,7 @@ export async function recipesRoutes(app: FastifyInstance) {
     },
     async (req, reply) => {
       const { id } = req.params as { id: string };
-      const detail = await recipesRepo.findPublicById(id); // Sem userId
+      const detail = await recipesRepo.findPublicById(id); 
       if (!detail) return reply.notFound('Receita não encontrada');
       return {
         ...detail,
@@ -554,11 +555,9 @@ export async function recipesRoutes(app: FastifyInstance) {
           servings: detail.servings ?? null,
         };
         console.log('Generating PDF for recipe (safe):', JSON.stringify(safeDetail, null, 2));
-        // try to normalize nutrition object shapes
         const rawNutrition = detail.nutrition ?? null;
         let normalizedNutrition: any = null;
         if (rawNutrition) {
-          // handle cases: { calories, protein, carbs, fat } or { perServing: { calories... } } or numeric strings
           const pick = (obj: any, key: string[]) => {
             for (const k of key) {
               if (obj && obj[k] !== undefined && obj[k] !== null) return obj[k];
@@ -587,7 +586,6 @@ export async function recipesRoutes(app: FastifyInstance) {
       const html = buildRecipeHtml({
         title: detail.title,
         description: detail.description,
-        // choose first photo if available
         imageUrl: detail.photos && detail.photos.length > 0 ? detail.photos[0].url : null,
         author: detail.author ? { id: detail.author.id, name: detail.author.name, photoUrl: detail.author.photoUrl ?? null } : null,
         ingredients: (detail.ingredients || []).map((i: any) => ({ name: i.name ?? i.note, amount: i.amount, unit: i.unit })),

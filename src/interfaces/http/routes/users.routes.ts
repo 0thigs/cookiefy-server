@@ -21,6 +21,7 @@ export async function usersRoutes(app: FastifyInstance) {
       email: user.email,
       name: user.name,
       photoUrl: user.photoUrl ?? null,
+      role: user.role,
       createdAt: user.createdAt,
     };
   });

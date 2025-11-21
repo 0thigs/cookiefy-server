@@ -367,7 +367,7 @@ export class PrismaRecipesRepository implements RecipesRepository {
     maxFat?: number;
     minServings?: number;
     maxServings?: number;
-    userId?: string; // Para verificar se é favorito
+    userId?: string; 
   }) {
     const {
       page,
@@ -420,7 +420,6 @@ export class PrismaRecipesRepository implements RecipesRepository {
       }
       : {};
 
-    // Busca por nome do autor
     const authorNameWhere = authorName
       ? {
         author: {
@@ -429,7 +428,6 @@ export class PrismaRecipesRepository implements RecipesRepository {
       }
       : {};
 
-    // Filtros por ingredientes (múltiplos)
     const ingredientsWhere =
       ingredients && ingredients.length > 0
         ? {
@@ -445,7 +443,6 @@ export class PrismaRecipesRepository implements RecipesRepository {
         }
         : {};
 
-    // Filtro por ingrediente único (compatibilidade)
     const singleIngredientWhere = ingredient
       ? {
         ingredients: {
@@ -466,7 +463,6 @@ export class PrismaRecipesRepository implements RecipesRepository {
     if (minCook !== undefined) cookWhere.gte = minCook;
     if (maxCook !== undefined) cookWhere.lte = maxCook;
 
-    // Filtros por tempo total (prep + cook)
     const totalTimeWhere: any = {};
     if (totalTimeMin !== undefined || totalTimeMax !== undefined) {
       const totalTimeConditions: any[] = [];
@@ -483,8 +479,6 @@ export class PrismaRecipesRepository implements RecipesRepository {
                     { prepMinutes: { gte: 0 } },
                     { cookMinutes: { gte: 0 } },
                     {
-                      // Soma prep + cook >= totalTimeMin
-                      // Usando raw query seria melhor, mas vamos com uma aproximação
                     }
                   ]
                 }
@@ -638,6 +632,105 @@ export class PrismaRecipesRepository implements RecipesRepository {
     }));
 
     return { items, total, page, pageSize };
+  }
+
+  async listAllPending(pagination: { page: number; pageSize: number }) {
+    const { page, pageSize } = pagination;
+    const skip = (page - 1) * pageSize;
+
+    const where = { status: 'DRAFT' } as const;
+
+    const [total, itemsRaw] = await Promise.all([
+      prisma.recipe.count({ where }),
+      prisma.recipe.findMany({
+        where,
+        orderBy: { createdAt: 'asc' },
+        skip,
+        take: pageSize,
+        include: {
+          author: { select: { id: true, name: true, photoUrl: true } }
+        }
+      }),
+    ]);
+
+    const items = itemsRaw.map((r) => ({
+      id: r.id,
+      title: r.title,
+      description: r.description ?? null,
+      authorId: r.authorId,
+      createdAt: r.createdAt,
+      status: r.status,
+      author: r.author,
+    }));
+
+    return { items, total, page, pageSize };
+  }
+
+  async moderateRecipe(id: string, status: 'PUBLISHED' | 'REJECTED', reason?: string, moderatorId?: string) {
+    await prisma.recipe.update({
+      where: { id },
+      data: {
+        status,
+        rejectedReason: status === 'REJECTED' ? reason : null,
+        moderatedById: moderatorId,
+        moderatedAt: new Date(),
+        publishedAt: status === 'PUBLISHED' ? new Date() : null,
+      }
+    });
+  }
+
+  async listAllForAdmin(pagination: { page: number; pageSize: number }, search?: string) {
+    const { page, pageSize } = pagination;
+    const skip = (page - 1) * pageSize;
+
+    const where: any = {};
+    
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: 'insensitive' } },
+        { author: { name: { contains: search, mode: 'insensitive' } } }
+      ];
+    }
+
+    const [total, itemsRaw] = await Promise.all([
+      prisma.recipe.count({ where }),
+      prisma.recipe.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: pageSize,
+        include: {
+          author: { select: { id: true, name: true, photoUrl: true } }
+        }
+      }),
+    ]);
+
+    const items = itemsRaw.map((r) => ({
+      id: r.id,
+      title: r.title,
+      description: r.description ?? null,
+      authorId: r.authorId,
+      createdAt: r.createdAt,
+      status: r.status,
+      author: r.author,
+    }));
+
+    return { items, total, page, pageSize };
+  }
+
+  async findByIdForAdmin(id: string) {
+    const r = await prisma.recipe.findUnique({
+      where: { id },
+      include: {
+        author: true,
+        steps: { orderBy: { order: 'asc' } },
+        photos: { orderBy: { order: 'asc' } },
+        ingredients: { include: { ingredient: true } },
+        categories: { include: { category: true } },
+      },
+    });
+    if (!r) return null;
+    return this.mapDetail(r);
   }
 
   private mapDetail(r: any) {
