@@ -1,2 +1,2 @@
-# POST https://cookiefy-server.onrender.com/notifications
-POST http://localhost:3333/notifications
+POST https://cookiefy-server.onrender.com/notifications
+# POST http://localhost:3333/notifications

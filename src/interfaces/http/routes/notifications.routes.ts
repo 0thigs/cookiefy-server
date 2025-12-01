@@ -15,8 +15,11 @@ export async function notificationsRoutes(app: FastifyInstance) {
     async (req, reply) => {
       try {
        const sendBroadcast = async () => {
-        const ONE_SIGNAL_APP_ID = "561d9775-45a7-44d8-9324-5cf459f669ad";
-        const ONE_SIGNAL_API_KEY = "os_v2_app_kyozo5kfu5cnrezelt2ft5tjvuajqflbmi2ep7m5zbxeh35ecf4uiobzl44ljeeyqgfmfopgjp64ybwqmoestu3r4y76i67a3jek6ly";
+        const ONE_SIGNAL_APP_ID = process.env.ONE_SIGNAL_APP_ID;
+        const ONE_SIGNAL_API_KEY = process.env.ONE_SIGNAL_API_KEY;
+
+        // console.log({ONE_SIGNAL_APP_ID})
+        // console.log({ONE_SIGNAL_API_KEY})
 
         const options = {
             method: 'POST',
