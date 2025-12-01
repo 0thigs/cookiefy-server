@@ -10,14 +10,13 @@ export async function notificationsRoutes(app: FastifyInstance) {
     {
       schema: {
         tags: ['Notifications'],
-        response: { 200: z.null() },
       },
     },
     async (req, reply) => {
       try {
        const sendBroadcast = async () => {
         const ONE_SIGNAL_APP_ID = "561d9775-45a7-44d8-9324-5cf459f669ad";
-        const ONE_SIGNAL_API_KEY = "os_v2_app_kyozo5kfu5cnrezelt2ft5tjvu7fa3pcmgdeps4grmr4igrsjiyfme4qxogctrdjcrvbwcaz2imk5px3wvcp5juslstxsdbm4xcuccy";
+        const ONE_SIGNAL_API_KEY = "os_v2_app_kyozo5kfu5cnrezelt2ft5tjvuajqflbmi2ep7m5zbxeh35ecf4uiobzl44ljeeyqgfmfopgjp64ybwqmoestu3r4y76i67a3jek6ly";
 
         const options = {
             method: 'POST',
@@ -49,13 +48,13 @@ export async function notificationsRoutes(app: FastifyInstance) {
             }
 
             console.log('Broadcast enviado com sucesso:', data);
-            return data;
+            return reply.send(data);
         } catch (err) {
             console.error('Falha ao enviar broadcast:', err);
         }
         };
 
-        sendBroadcast();
+        return sendBroadcast();
       } catch (e: any) {
         throw e;
       }
