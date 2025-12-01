@@ -25,6 +25,7 @@ import { categoriesRoutes } from './routes/categories.routes.js';
 import { favoritesRoutes } from './routes/favorites.routes.js';
 import { reviewsRoutes } from './routes/reviews.routes.js';
 import { shoppingListRoutes } from './routes/shopping-list.routes.js';
+import { notificationsRoutes } from './routes/notifications.routes.js';
 
 export function buildServer(): FastifyInstance {
   const app = Fastify({
@@ -83,6 +84,7 @@ export function buildServer(): FastifyInstance {
   app.register(recipesRoutes, { prefix: '/recipes' });
   app.register(categoriesRoutes, { prefix: '/categories' });
   app.register(favoritesRoutes, { prefix: '/favorites' });
+  app.register(notificationsRoutes, { prefix: '/notifications' });
   app.register(reviewsRoutes);
   app.register(shoppingListRoutes, { prefix: '/shopping-list' });
 
